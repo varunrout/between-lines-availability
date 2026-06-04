@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "between-lines-availability"
+version = "0.1.0"
+description = "Between-Lines Availability Model using StatsBomb 360 Data"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "statsbombpy>=1.0.3",
+    "pandas>=1.5.0",
+    "numpy>=1.23.0",
+    "shapely>=2.0.0",
+    "scikit-learn>=1.2.0",
+    "xgboost>=1.7.0",
+    "matplotlib>=3.6.0",
+    "mplsoccer>=1.1.12",
+    "seaborn>=0.12.0",
+    "tqdm>=4.64.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
