@@ -70,8 +70,9 @@ def compute_findability(candidates_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.D
     df["findability_score"] = df.apply(_score_candidate, axis=1)
 
     # ----- Event-level aggregation -----
+    value_cols = [col for col in df.columns if col != "event_id"]
     event_agg = (
-        df.groupby("event_id")
+        df.groupby("event_id")[value_cols]
         .apply(_aggregate_event)
         .reset_index()
     )
