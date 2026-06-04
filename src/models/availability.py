@@ -112,6 +112,7 @@ class AvailabilityModel:
         """
         X, y = self._prepare(df)
         self.feature_cols = list(X.columns)
+        fitted_any = False
 
         if model in ("lr", "both"):
             lr = LogisticRegression(
@@ -124,6 +125,7 @@ class AvailabilityModel:
             )
             self.lr_pipeline.fit(X, y)
             logger.info("Logistic Regression fitted on %d samples", len(y))
+            fitted_any = True
 
         if model in ("xgb", "both") and XGBOOST_AVAILABLE:
             self.xgb_model = XGBClassifier(
@@ -137,6 +139,10 @@ class AvailabilityModel:
             )
             self.xgb_model.fit(X, y)
             logger.info("XGBoost fitted on %d samples", len(y))
+            fitted_any = True
+
+        if not fitted_any:
+            raise RuntimeError("No model was fitted. Check the requested model and dependencies.")
 
         self._is_fitted = True
         return self
@@ -148,6 +154,8 @@ class AvailabilityModel:
         model: str = "xgb",
     ) -> np.ndarray:
         """Return probability of class 1 (findable option available)."""
+        if not self._is_fitted:
+            raise RuntimeError("Model has not been fitted.")
         X, _ = self._prepare(df, is_train=False)
         if model == "lr" or (model == "xgb" and self.xgb_model is None):
             return self.lr_pipeline.predict_proba(X)[:, 1]
@@ -256,9 +264,7 @@ class AvailabilityModel:
             dummies = pd.get_dummies(df["ball_zone"], prefix="ball_zone")
             df = pd.concat([df, dummies], axis=1)
 
-        # Select features that exist in this DataFrame
-        available = [c for c in FEATURE_COLUMNS if c in df.columns]
-        X = df[available].copy().fillna(0).astype(float)
+        X = df.reindex(columns=FEATURE_COLUMNS, fill_value=0).copy().fillna(0).astype(float)
 
         y = df[TARGET_COLUMN].astype(int) if (is_train and TARGET_COLUMN in df.columns) else None
         return X, y

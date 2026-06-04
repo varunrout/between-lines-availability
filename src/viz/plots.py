@@ -193,6 +193,7 @@ def plot_freeze_frame(
         loc="upper left", fontsize=8, facecolor="#1a1a2e",
         edgecolor="white", labelcolor="white",
     )
+    ax.add_artist(legend)
     _add_green_unfindable_legend(ax)
 
     if save_path:
@@ -382,7 +383,10 @@ def plot_missed_opportunity(
     cands = candidates_scored_df[candidates_scored_df["event_id"] == event_id]
     findable = cands[cands.get("findability_score", pd.Series(dtype=float)) >= FINDABLE_SCORE_THRESHOLD]
     if not findable.empty and len(fig.axes) > 0:
-        best = findable.iloc[0]
+        if "findability_score" in findable.columns:
+            best = findable.sort_values("findability_score", ascending=False).iloc[0]
+        else:
+            best = findable.iloc[0]
         ax = fig.axes[0]
         ax.scatter(
             best["receiver_x"], best["receiver_y"],

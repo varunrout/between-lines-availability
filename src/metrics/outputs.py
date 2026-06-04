@@ -75,20 +75,21 @@ def compute_team_metrics(merged_df: pd.DataFrame) -> pd.DataFrame:
     total_findable = merged_df.groupby(group_cols)["n_findable_candidates"].sum()
     central = merged_df.groupby(group_cols)["central_findable_count"].sum()
     half_space = merged_df.groupby(group_cols)["half_space_findable_count"].sum()
+    total_findable = total_findable.replace(0, float("nan"))
 
     team_df = team_df.set_index(group_cols)
-    team_df["central_access_rate"] = (central / total_findable.replace(0, float("nan"))).values
-    team_df["half_space_access_rate"] = (half_space / total_findable.replace(0, float("nan"))).values
+    team_df["central_access_rate"] = (central / total_findable).reindex(team_df.index)
+    team_df["half_space_access_rate"] = (half_space / total_findable).reindex(team_df.index)
 
     # Missed access rate (optional – requires pass_to_between_lines column)
     if "pass_to_between_lines" in merged_df.columns:
         missed = merged_df[merged_df["findable_option_available"] == 1].copy()
         missed_rate = (
-            missed.groupby(group_cols)
-            .apply(lambda g: 1 - g["pass_to_between_lines"].mean(), include_groups=False)
-            .rename("missed_access_rate")
+            1 - missed.groupby(group_cols)["pass_to_between_lines"].mean()
+        ).rename("missed_access_rate")
+        team_df = team_df.join(
+            missed_rate.reindex(team_df.index)
         )
-        team_df = team_df.join(missed_rate)
 
     team_df = team_df.reset_index()
     team_df["between_lines_availability_rate"] = (

@@ -136,10 +136,10 @@ def load_all_competitions(
             logger.error("Failed to load competition %s: %s", comp["name"], exc)
 
     return (
-        pd.concat(all_events, ignore_index=True),
-        pd.concat(all_frames, ignore_index=True),
-        pd.concat(all_lineups, ignore_index=True),
-        pd.concat(all_matches, ignore_index=True),
+        pd.concat(all_events, ignore_index=True) if all_events else pd.DataFrame(),
+        pd.concat(all_frames, ignore_index=True) if all_frames else pd.DataFrame(),
+        pd.concat(all_lineups, ignore_index=True) if all_lineups else pd.DataFrame(),
+        pd.concat(all_matches, ignore_index=True) if all_matches else pd.DataFrame(),
     )
 
 

@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 # Public API
 # ---------------------------------------------------------------------------
 
-def compute_findability(candidates_df: pd.DataFrame) -> pd.DataFrame:
+def compute_findability(candidates_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Score each receiver candidate and aggregate to event level.
 
     Parameters
@@ -72,7 +72,7 @@ def compute_findability(candidates_df: pd.DataFrame) -> pd.DataFrame:
     # ----- Event-level aggregation -----
     event_agg = (
         df.groupby("event_id")
-        .apply(_aggregate_event, include_groups=False)
+        .apply(_aggregate_event)
         .reset_index()
     )
 

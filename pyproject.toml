@@ -7,7 +7,7 @@ name = "between-lines-availability"
 version = "0.1.0"
 description = "Between-Lines Availability Model using StatsBomb 360 Data"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "statsbombpy>=1.0.3",
     "pandas>=1.5.0",

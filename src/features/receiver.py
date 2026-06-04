@@ -98,7 +98,8 @@ def detect_receiver_candidates(
 
         # Visible area polygon (may be None)
         visible_area_raw = group["visible_area"].iloc[0]
-        visible_polygon = _build_visible_polygon(visible_area_raw)
+        flip_frame = bool(group["_flip_frame"].iloc[0])
+        visible_polygon = _build_visible_polygon(visible_area_raw, flip_frame=flip_frame)
 
         # Opponent positions for nearest-defender calculation
         opponents = group[
@@ -186,13 +187,20 @@ def _check_visible_area(
         return True
 
 
-def _build_visible_polygon(raw) -> Optional[object]:
+def _build_visible_polygon(raw, flip_frame: bool = False) -> Optional[object]:
     """Build a Shapely Polygon from the raw visible_area coordinate list."""
     if not SHAPELY_AVAILABLE or raw is None:
         return None
     try:
         if isinstance(raw, (list, tuple)) and len(raw) >= 3:
-            return Polygon(raw)
+            coords = [
+                (
+                    PITCH_LENGTH - x if flip_frame else x,
+                    PITCH_WIDTH - y if flip_frame else y,
+                )
+                for x, y in raw
+            ]
+            return Polygon(coords)
     except Exception:
         pass
     return None

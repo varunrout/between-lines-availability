@@ -153,10 +153,12 @@ def run(args: argparse.Namespace) -> None:
         all_lineups.append(lu)
         all_matches.append(ma)
 
-    events_df = pd.concat(all_events, ignore_index=True)
-    frames_df = pd.concat([f for f in all_frames if not f.empty], ignore_index=True)
-    lineups_df = pd.concat([l for l in all_lineups if not l.empty], ignore_index=True)
-    matches_df = pd.concat(all_matches, ignore_index=True)
+    events_df = pd.concat(all_events, ignore_index=True) if all_events else pd.DataFrame()
+    non_empty_frames = [f for f in all_frames if not f.empty]
+    frames_df = pd.concat(non_empty_frames, ignore_index=True) if non_empty_frames else pd.DataFrame()
+    non_empty_lineups = [l for l in all_lineups if not l.empty]
+    lineups_df = pd.concat(non_empty_lineups, ignore_index=True) if non_empty_lineups else pd.DataFrame()
+    matches_df = pd.concat(all_matches, ignore_index=True) if all_matches else pd.DataFrame()
 
     logger.info(
         "Total: %d events, %d frame rows across %d matches",
@@ -312,7 +314,19 @@ def _save_freeze_frame_examples(
             logger.debug("Skipped freeze-frame %s: %s", eid, exc)
 
     # Missed opportunities
-    for i, eid in enumerate(findable_ids[:n]):
+    missed_ids: list = []
+    if "pass_to_between_lines" in merged_df.columns:
+        missed_ids = merged_df[
+            (merged_df["findable_option_available"] == 1) &
+            (merged_df["pass_to_between_lines"] == 0)
+        ]["id"].dropna().tolist()
+        missed_ids = [eid for eid in missed_ids if eid in events_with_frames]
+    else:
+        logger.debug(
+            "Skipping missed-opportunity plots: pass_to_between_lines column not available."
+        )
+
+    for i, eid in enumerate(missed_ids[:n]):
         try:
             plot_missed_opportunity(
                 event_id=eid,

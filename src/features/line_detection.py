@@ -108,7 +108,7 @@ def _compute_lines_for_event(
 
     The attacking team attacks left → right (increasing x) after
     standardisation, so the defending team's goal is at x = 120.
-    Deepest defenders (smallest x among opponents) form the defensive line.
+    Deepest defenders (largest x among opponents) form the defensive line.
     """
     # Opponent outfield players only
     opponents = group[
@@ -122,8 +122,8 @@ def _compute_lines_for_event(
         # Not enough opponent data in frame
         return None
 
-    # Sort by x ascending: lowest x = deepest defenders (furthest from opp goal)
-    opponents_sorted = opponents.sort_values("frame_x")
+    # Sort by x descending: highest x = deepest defenders (closest to own goal)
+    opponents_sorted = opponents.sort_values("frame_x", ascending=False)
 
     # Defensive line: median x of deepest N defenders
     def_players = opponents_sorted.iloc[:N_DEFENDERS_DEFENSIVE_LINE]
