@@ -125,7 +125,7 @@ def plot_freeze_frame(
     by = float(event_row["y"].iloc[0])
 
     ax.scatter(bx, by, s=300, marker="*", color=COLOURS["ball_carrier"],
-               zorder=6, label="Ball carrier", edgecolors="black", linewidths=0.5)
+               zorder=6, label="Ball carrier", edgecolor="black", linewidth=0.5)
 
     # --- Opponent lines ---
     lines = line_df[line_df["event_id"] == event_id]
@@ -163,7 +163,7 @@ def plot_freeze_frame(
             ax.scatter(
                 opponents["frame_x"], opponents["frame_y"],
                 s=120, color=COLOURS["opponent"], zorder=4,
-                label="Opponent", edgecolors="white", linewidths=0.5,
+                label="Opponent", edgecolor="white", linewidth=0.5,
             )
 
     # --- Receiver candidates ---
@@ -175,7 +175,7 @@ def plot_freeze_frame(
         lane_col = COLOURS["lane_clear"] if not cand.get("lane_blocked", 1) else COLOURS["lane_blocked"]
 
         ax.scatter(rx, ry, s=150, color=color, zorder=5,
-                   edgecolors="white", linewidths=0.5)
+                   edgecolor="white", linewidth=0.5)
 
         # Draw passing lane
         ax.plot([bx, rx], [by, ry], color=lane_col, linewidth=1.5,
@@ -277,8 +277,8 @@ def plot_availability_scatter(
         s=80,
         c=df["times_between_lines"],
         cmap="YlOrRd",
-        edgecolors="white",
-        linewidths=0.4,
+        edgecolor="white",
+        linewidth=0.4,
         alpha=0.9,
     )
 
@@ -386,8 +386,8 @@ def plot_missed_opportunity(
         ax = fig.axes[0]
         ax.scatter(
             best["receiver_x"], best["receiver_y"],
-            s=500, color="none", edgecolors="yellow",
-            linewidths=2.5, zorder=7,
+            s=500, color="none", edgecolor="yellow",
+            linewidth=2.5, zorder=7,
         )
         ax.annotate(
             "← Best option\n   not played",

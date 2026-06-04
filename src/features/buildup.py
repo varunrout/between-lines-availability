@@ -200,14 +200,18 @@ def _build_direction_map(df: pd.DataFrame) -> dict[tuple[int, int, str], bool]:
         periods = match_df["period"].unique().tolist()
 
         for period in periods:
-            # Directions swap each period
+            # The kickoff team attacks left-to-right (no flip) in odd periods
+            # (period 1, 3, …) and right-to-left (flip=True) in even periods
+            # (period 2, 4, …).  The other team is the mirror image.
+            kickoff_team_attacks_ltr = (period % 2 == 1)
             for team in teams:
                 is_kickoff_team = team == kickoff_team
-                # Period 1: kickoff team → no flip (attacks L→R)
-                # Period 2: kickoff team → flip (attacks R→L)
-                # Period 3: back to no flip, etc.
-                no_flip_in_odd = is_kickoff_team
-                flip = not no_flip_in_odd if (period % 2 == 1) else no_flip_in_odd
+                if is_kickoff_team:
+                    # Kickoff team: no flip in odd periods, flip in even
+                    flip = not kickoff_team_attacks_ltr
+                else:
+                    # Opposition: flip in odd periods, no flip in even
+                    flip = kickoff_team_attacks_ltr
                 direction_map[(match_id, period, team)] = flip
 
     return direction_map
