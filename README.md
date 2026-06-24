@@ -19,6 +19,36 @@ It aims to answer questions such as:
 - Which ball-carriers recognize and use those options?
 - How often do teams leave valuable central progression opportunities unused?
 
+## Install
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+## Local checks
+
+```bash
+python -m ruff check src scripts tests
+python -m pytest -q
+```
+
+## Run the MVP pipeline
+
+Quick smoke run:
+
+```bash
+python scripts/run_pipeline.py --competitions euro2024 --max-matches 1 --skip-model
+```
+
+Full configured run:
+
+```bash
+python scripts/run_pipeline.py --competitions euro2020 wc2022 euro2024 --output-dir outputs
+```
+
 ## Data
 
 The project is built around:
@@ -48,6 +78,8 @@ Candidate event types include:
 - Pressure
 - Miscontrol
 - Dribble
+
+The current implementation starts with Pass, Carry and Ball Receipt events for the build-up MVP.
 
 ## Build-up definition
 
@@ -122,6 +154,7 @@ A receiver is **findable** if:
 
 - they are between the lines
 - they are ahead of the ball
+- they are central or in a half-space
 - pass distance is below a defined threshold
 - they are not tightly marked
 - the passing lane is not blocked
@@ -259,9 +292,9 @@ Potential feature groups:
 - passing geometry
 - receiver space
 
-### 8. Outputs
+## Outputs
 
-#### Team-level metrics
+### Team-level metrics
 
 - **Between-Lines Availability Rate**
 - **Central Access Rate**
@@ -269,7 +302,7 @@ Potential feature groups:
 - **Missed Access Rate**
 - **Line Gap Exploitation**
 
-#### Player-level metrics
+### Player-level metrics
 
 - **Receiver Availability**
 - **Used Availability**
@@ -305,6 +338,11 @@ The first version of the project should answer:
 - passing lane obstruction logic
 - team and player rankings for availability
 - example freeze-frame visuals for available and unavailable options
+
+## Documentation
+
+- [MVP delivery plan](docs/MVP_DELIVERY_PLAN.md)
+- [Methodology guardrails](docs/METHODOLOGY_GUARDRAILS.md)
 
 ## Portfolio framing
 
