@@ -31,7 +31,7 @@ python -m pip install -e ".[dev]"
 ## Local checks
 
 ```bash
-python -m ruff check src scripts tests
+python -m ruff check src scripts tests --select F821
 python -m pytest -q
 ```
 
@@ -48,6 +48,12 @@ Full configured run:
 ```bash
 python scripts/run_pipeline.py --competitions euro2020 wc2022 euro2024 --output-dir outputs
 ```
+
+## CI/CD
+
+The repository includes workflows for fast PR validation, notebook checks, manual data smoke tests, package artifact builds and tagged releases.
+
+See [CI/CD workflows](docs/CI_CD.md) for the full workflow map and recommended usage.
 
 ## Data
 
@@ -343,6 +349,8 @@ The first version of the project should answer:
 
 - [MVP delivery plan](docs/MVP_DELIVERY_PLAN.md)
 - [Methodology guardrails](docs/METHODOLOGY_GUARDRAILS.md)
+- [CI/CD workflows](docs/CI_CD.md)
+- [Completion PR delivery plan](docs/COMPLETION_PR_PLAN.md)
 
 ## Portfolio framing
 
