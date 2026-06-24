@@ -1,0 +1,44 @@
+name: Notebook Check
+
+on:
+  pull_request:
+    paths:
+      - "notebooks/**"
+      - ".github/workflows/notebook-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "notebooks/**"
+      - ".github/workflows/notebook-check.yml"
+
+jobs:
+  validate-notebooks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate notebook JSON
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          notebooks = sorted(Path("notebooks").glob("*.ipynb"))
+          if not notebooks:
+              raise SystemExit("No notebooks found under notebooks/")
+
+          for path in notebooks:
+              with path.open("r", encoding="utf-8") as fh:
+                  payload = json.load(fh)
+              if "cells" not in payload:
+                  raise AssertionError(f"{path} has no cells key")
+              if not isinstance(payload["cells"], list):
+                  raise AssertionError(f"{path} cells must be a list")
+              print(f"validated {path}")
+          PY
