@@ -133,7 +133,8 @@ def compute_player_metrics(
     )
 
     if "player" in merged_df.columns and "pass_to_between_lines" in merged_df.columns:
-        avail_events = merged_df[merged_df.get("findable_option_available", 0) == 1]
+        merged_for_recognition = _ensure_event_metric_columns(merged_df)
+        avail_events = merged_for_recognition[merged_for_recognition["findable_option_available"] == 1]
         if not avail_events.empty:
             recognition = (
                 avail_events.groupby("player", dropna=False)["pass_to_between_lines"]
