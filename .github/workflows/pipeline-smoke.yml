@@ -1,0 +1,68 @@
+name: Pipeline Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      competition:
+        description: "Competition shortcut to run"
+        required: true
+        default: "euro2024"
+        type: choice
+        options:
+          - euro2020
+          - wc2022
+          - euro2024
+      max_matches:
+        description: "Maximum matches to load"
+        required: true
+        default: "1"
+      skip_model:
+        description: "Skip ML model training"
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run pipeline smoke test
+        run: |
+          SKIP_MODEL_FLAG=""
+          if [ "${{ inputs.skip_model }}" = "true" ]; then
+            SKIP_MODEL_FLAG="--skip-model"
+          fi
+          python scripts/run_pipeline.py \
+            --competitions "${{ inputs.competition }}" \
+            --max-matches "${{ inputs.max_matches }}" \
+            --output-dir outputs/smoke \
+            $SKIP_MODEL_FLAG
+
+      - name: Check expected outputs
+        run: |
+          test -f outputs/smoke/buildup_events.csv
+          test -f outputs/smoke/merged_analysis.csv
+          test -f outputs/smoke/team_metrics.csv
+          test -f outputs/smoke/player_metrics.csv
+
+      - name: Upload smoke outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-smoke-outputs
+          path: outputs/smoke
+          retention-days: 14
