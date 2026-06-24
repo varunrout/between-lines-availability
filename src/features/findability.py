@@ -5,25 +5,17 @@ Aggregates per-candidate features into a findability score (0–3) and then
 collapses to an event-level binary flag and summary statistics.
 
 Scoring rules (per candidate)
-------------------------------
-  Base: candidate must be between_lines AND ahead_of_ball → else score = 0
-  +1 : pass_distance   < MAX_PASS_DISTANCE_M   (reachable)
-  +1 : nearest_defender_dist > MIN_RECEIVER_SPACE_M  (not tightly marked)
-  +1 : lane_blocked == 0                        (clear lane)
-
-  score ∈ {0, 1, 2, 3}
+-----------------------------
+  Base: candidate must be between_lines, ahead_of_ball, visible, and central/half-space
+  +1 : pass_distance < MAX_PASS_DISTANCE_M          (reachable)
+  +1 : nearest_defender_dist > MIN_RECEIVER_SPACE_M (not tightly marked)
+  +1 : lane_blocked == 0                            (clear lane)
 
 Event-level aggregation
-------------------------
+-----------------------
   max_findability_score      : max score among all candidates at this event
   n_findable_candidates      : count with score >= FINDABLE_SCORE_THRESHOLD
   findable_option_available  : 1 if any candidate has score >= threshold
-
-Usage
------
-    from src.features.findability import compute_findability
-
-    event_scores = compute_findability(candidates_with_lanes_df)
 """
 
 from __future__ import annotations
@@ -40,6 +32,25 @@ from src.config import (
 
 logger = logging.getLogger(__name__)
 
+VALID_RECEIVER_ZONES = {"central", "half_space_low", "half_space_high"}
+
+EVENT_SCORE_COLUMNS = [
+    "event_id",
+    "max_findability_score",
+    "findable_option_available",
+    "n_findable_candidates",
+    "n_between_lines_candidates",
+    "n_total_candidates",
+    "central_findable_count",
+    "half_space_findable_count",
+    "best_receiver_x",
+    "best_receiver_y",
+    "best_receiver_name",
+    "best_pass_distance",
+    "best_nearest_defender",
+    "best_lane_blocked",
+]
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -51,10 +62,8 @@ def compute_findability(candidates_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.D
     Parameters
     ----------
     candidates_df:
-        Output of ``src.features.lane.compute_lane_features``.
-        Must have columns: ``event_id``, ``between_lines``,
-        ``ahead_of_ball``, ``pass_distance``, ``nearest_defender_dist``,
-        ``lane_blocked``, ``in_visible_area``, ``centrality_zone``.
+        Output of ``src.features.lane.compute_lane_features``. Must have
+        candidate-level geometry, pressure and lane features.
 
     Returns
     -------
@@ -64,29 +73,32 @@ def compute_findability(candidates_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.D
         All candidates with an added ``findability_score`` column.
     """
     if candidates_df.empty:
-        return pd.DataFrame(), candidates_df.copy()
+        scored = candidates_df.copy()
+        if "findability_score" not in scored.columns:
+            scored["findability_score"] = pd.Series(dtype="int64")
+        return pd.DataFrame(columns=EVENT_SCORE_COLUMNS), scored
 
     df = candidates_df.copy()
-    df["findability_score"] = df.apply(_score_candidate, axis=1)
+    df["findability_score"] = df.apply(_score_candidate, axis=1).astype(int)
 
-    # ----- Event-level aggregation -----
-    value_cols = [col for col in df.columns if col != "event_id"]
     event_agg = (
-        df.groupby("event_id")[value_cols]
+        df.groupby("event_id", group_keys=False)
         .apply(_aggregate_event)
         .reset_index()
     )
+    event_agg = event_agg.reindex(columns=EVENT_SCORE_COLUMNS)
 
+    availability_rate = 0.0 if event_agg.empty else 100.0 * event_agg["findable_option_available"].mean()
     logger.info(
         "Findability: %d events, %.1f%% have at least one findable option",
         len(event_agg),
-        100.0 * event_agg["findable_option_available"].mean(),
+        availability_rate,
     )
     return event_agg, df
 
 
 def score_candidate(row: pd.Series) -> int:
-    """Public single-row scoring helper (also used by tests)."""
+    """Public single-row scoring helper, also used by tests."""
     return _score_candidate(row)
 
 
@@ -95,28 +107,29 @@ def score_candidate(row: pd.Series) -> int:
 # ---------------------------------------------------------------------------
 
 def _score_candidate(row: pd.Series) -> int:
-    """Compute findability score (0–3) for a single receiver candidate row."""
-    # Base requirement: must be between the lines AND ahead of the ball
-    if not row.get("between_lines", False) or not row.get("ahead_of_ball", False):
+    """Compute findability score from rule-based candidate features."""
+    if not bool(row.get("between_lines", False)):
+        return 0
+    if not bool(row.get("ahead_of_ball", False)):
         return 0
 
-    # Optionally require visibility (skip if column absent)
-    if "in_visible_area" in row.index and not row["in_visible_area"]:
+    if "in_visible_area" in row.index and not bool(row["in_visible_area"]):
+        return 0
+
+    centrality_zone = row.get("centrality_zone", "wide")
+    if pd.notna(centrality_zone) and centrality_zone not in VALID_RECEIVER_ZONES:
         return 0
 
     score = 0
 
-    # +1: reachable distance
     pass_dist = row.get("pass_distance", float("inf"))
-    if pd.notna(pass_dist) and pass_dist < MAX_PASS_DISTANCE_M:
+    if pd.notna(pass_dist) and float(pass_dist) < MAX_PASS_DISTANCE_M:
         score += 1
 
-    # +1: not tightly marked
     nearest = row.get("nearest_defender_dist", 0.0)
-    if pd.notna(nearest) and nearest > MIN_RECEIVER_SPACE_M:
+    if pd.notna(nearest) and float(nearest) > MIN_RECEIVER_SPACE_M:
         score += 1
 
-    # +1: clear passing lane
     lane_blocked = row.get("lane_blocked", 1)
     if pd.notna(lane_blocked) and int(lane_blocked) == 0:
         score += 1
@@ -129,16 +142,14 @@ def _aggregate_event(group: pd.DataFrame) -> pd.Series:
     max_score = int(group["findability_score"].max())
     n_findable = int((group["findability_score"] >= FINDABLE_SCORE_THRESHOLD).sum())
     n_between_lines = int(group["between_lines"].sum())
-    n_candidates = len(group)
+    n_candidates = int(len(group))
 
-    # Zone breakdown of findable candidates
     findable = group[group["findability_score"] >= FINDABLE_SCORE_THRESHOLD]
     central_findable = int((findable["centrality_zone"] == "central").sum())
     half_space_findable = int(
         findable["centrality_zone"].isin(["half_space_low", "half_space_high"]).sum()
     )
 
-    # Best candidate metrics
     best_idx = group["findability_score"].idxmax() if not group.empty else None
     best_candidate = group.loc[best_idx] if best_idx is not None else pd.Series(dtype=object)
 
